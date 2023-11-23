@@ -1,0 +1,9 @@
+{
+	"name": "dfdataflow0023",
+	"location": "westus2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "23a5cb46-a264-4547-9931-96459fc56093",
+		"tenantId": "3196a18d-1c35-498a-b779-a082d45d2ab5"
+	}
+}
