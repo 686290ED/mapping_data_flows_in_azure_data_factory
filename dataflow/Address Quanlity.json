@@ -13,7 +13,15 @@
 					"description": "Add source dataset Address"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "adlsgen2folder",
+						"type": "DatasetReference"
+					},
+					"name": "OutputToADLS"
+				}
+			],
 			"transformations": [
 				{
 					"name": "MetadataChecker"
@@ -23,12 +31,15 @@
 				},
 				{
 					"name": "DataQuanlityRules"
+				},
+				{
+					"name": "FilterOutNULLCountry"
+				},
+				{
+					"name": "MakeFullAddress"
 				}
 			],
 			"scriptLines": [
-				"parameters{",
-				"     parameter1 as string",
-				"}",
 				"source(output(",
 				"          AddressID as integer,",
 				"          AddressLine1 as string,",
@@ -49,7 +60,16 @@
 				"MetadataChecker@Fail assert(expectTrue(false(), false, 'failedMetadata', null, 'Not all columns present'),",
 				"     abort: true) ~> FailedMetaData",
 				"MetadataChecker@Pass assert(expectTrue(CountryRegion == 'United States', false, 'assertUsOnly', null, CountryRegion + ' is not valid'),",
-				"     expectUnique(ERROR_FUNCTION(''), false, 'addressIdUnique', null, 'ID of ' + AddressID +' is not unique'  )) ~> DataQuanlityRules"
+				"     expectUnique(AddressID, false, 'addressIdUnique', null, \"ID of {AddressID} is not unique\")) ~> DataQuanlityRules",
+				"DataQuanlityRules filter(!isNull(CountryRegion)) ~> FilterOutNULLCountry",
+				"FilterOutNULLCountry derive({Full Address} = \"{AddressLine1} {City}, {StateProvince} {PostalCode}\") ~> MakeFullAddress",
+				"MakeFullAddress sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> OutputToADLS"
 			]
 		}
 	}
