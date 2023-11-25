@@ -6,12 +6,12 @@
 		"annotations": [],
 		"type": "SqlServer",
 		"typeProperties": {
-			"connectionString": "integrated security=True;data source=localhost;initial catalog=AdventureWorks2019",
+			"connectionString": "integrated security=True;data source=localhost;initial catalog=AdventureWorksDW2019",
 			"userName": "DESKTOP-1BFJ2EM\\ZHEN",
 			"alwaysEncryptedSettings": {
 				"alwaysEncryptedAkvAuthType": "ManagedIdentity"
 			},
-			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiIzNGViMzEyMC04YmVlLTQ4MTMtYmQ1ZC03MWI3YThmZmFjZmEiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJiNzYwNGNlYy1mYzliLTQ4NmQtYjEwYS01NDA4ZTM2N2E3YzEiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
 		},
 		"connectVia": {
 			"referenceName": "integrationRuntimeSelfHosted",
