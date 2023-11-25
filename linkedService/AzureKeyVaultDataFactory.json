@@ -1,0 +1,11 @@
+{
+	"name": "AzureKeyVaultDataFactory",
+	"properties": {
+		"description": "key vault storing self-hosted integration runtime",
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://keyvalutIR.vault.azure.net/"
+		}
+	}
+}
