@@ -1,5 +1,5 @@
 {
-	"name": "adlsgen2folder",
+	"name": "adlsgen2newproducts",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "AzureDataLakeStorageAW",
@@ -10,14 +10,34 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
-				"folderPath": "Address",
-				"fileSystem": "SalesLT"
+				"fileSystem": "newproducts"
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
 			"firstRowAsHeader": true,
 			"quoteChar": "\""
 		},
-		"schema": []
+		"schema": [
+			{
+				"name": "Name",
+				"type": "String"
+			},
+			{
+				"name": "ProductNumber",
+				"type": "String"
+			},
+			{
+				"name": "Color",
+				"type": "String"
+			},
+			{
+				"name": "StandardCost",
+				"type": "String"
+			},
+			{
+				"name": "ListPrice",
+				"type": "String"
+			}
+		]
 	}
 }

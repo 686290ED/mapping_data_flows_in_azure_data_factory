@@ -1,5 +1,5 @@
 {
-	"name": "AzureSqlTable_address",
+	"name": "AzureSqlTableAddress",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "AzureSqlDatabase_aw",

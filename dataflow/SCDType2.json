@@ -1,0 +1,228 @@
+{
+	"name": "SCDType2",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "adlsgen2newproducts",
+						"type": "DatasetReference"
+					},
+					"name": "NewProducts"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableProduct",
+						"type": "DatasetReference"
+					},
+					"name": "ExistingProducts"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableProduct",
+						"type": "DatasetReference"
+					},
+					"name": "LookupMaxKey"
+				}
+			],
+			"sinks": [
+				{
+					"name": "CacheKey"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableProduct",
+						"type": "DatasetReference"
+					},
+					"name": "DimensionTableUpdate"
+				}
+			],
+			"transformations": [
+				{
+					"name": "CreateRowHash1"
+				},
+				{
+					"name": "FilterForCurrent"
+				},
+				{
+					"name": "CreateRowHash2"
+				},
+				{
+					"name": "CheckForNewProducts"
+				},
+				{
+					"name": "GenProductKey"
+				},
+				{
+					"name": "AddDimensionColumns"
+				},
+				{
+					"name": "UnionAllData"
+				},
+				{
+					"name": "FilterForExistingProducts"
+				},
+				{
+					"name": "ObsoleteRow"
+				},
+				{
+					"name": "MarkAsUpdate"
+				},
+				{
+					"name": "RemoveRowHash1"
+				},
+				{
+					"name": "RemoveRowHash2"
+				},
+				{
+					"name": "MarkAsInsert"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          Name as string,",
+				"          ProductNumber as string,",
+				"          Color as string,",
+				"          StandardCost as string,",
+				"          ListPrice as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     purgeFiles: true,",
+				"     wildcardPaths:['today/*.csv']) ~> NewProducts",
+				"source(output(",
+				"          ProductKey as integer,",
+				"          ProductNumber as string,",
+				"          Name as string,",
+				"          Color as string,",
+				"          StandardCost as decimal(19,4),",
+				"          ListPrice as decimal(19,4),",
+				"          StartDate as timestamp,",
+				"          EndDate as timestamp,",
+				"          Active as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'REPEATABLE_READ',",
+				"     format: 'table') ~> ExistingProducts",
+				"source(output(",
+				"          maxkey as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'select max (ProductKey) as maxkey from dbo.DimProduct',",
+				"     format: 'query') ~> LookupMaxKey",
+				"NewProducts derive(RowHash1 = md5(Name,Color,StandardCost,ListPrice),",
+				"          StandardCost = toDecimal(StandardCost),",
+				"          ListPrice = toDecimal(ListPrice)) ~> CreateRowHash1",
+				"ExistingProducts filter(Active==1) ~> FilterForCurrent",
+				"FilterForCurrent derive(RowHash2 = md5(Name,Color,StandardCost,ListPrice)) ~> CreateRowHash2",
+				"CreateRowHash1, CreateRowHash2 exists(NewProducts@ProductNumber== ExistingProducts@ProductNumber && RowHash1 == ",
+				"RowHash2 /* Ignore rows that are identical */,",
+				"     negate:true,",
+				"     broadcast: 'left')~> CheckForNewProducts",
+				"CheckForNewProducts keyGenerate(output(ProductKey as long),",
+				"     startAt: 1L,",
+				"     stepValue: 1L) ~> GenProductKey",
+				"GenProductKey derive(ProductKey = ProductKey+toInteger(CacheKey#output().maxkey),",
+				"          Active = 1,",
+				"          StartDate = currentUTC(),",
+				"          EndDate = toTimestamp(null())) ~> AddDimensionColumns",
+				"MarkAsInsert, MarkAsUpdate union(byName: true)~> UnionAllData",
+				"CreateRowHash2, CreateRowHash1 exists(NewProducts@ProductNumber== ExistingProducts@ProductNumber && RowHash1 != ",
+				"RowHash2 /* Ignore rows that are identical */,",
+				"     negate:false,",
+				"     broadcast: 'right')~> FilterForExistingProducts",
+				"FilterForExistingProducts derive(Active = 0,",
+				"          EndDate = currentUTC()) ~> ObsoleteRow",
+				"RemoveRowHash2 alterRow(updateIf(true())) ~> MarkAsUpdate",
+				"AddDimensionColumns select(mapColumn(",
+				"          ProductKey,",
+				"          Name,",
+				"          ProductNumber,",
+				"          Color,",
+				"          StandardCost,",
+				"          ListPrice,",
+				"          StartDate,",
+				"          EndDate,",
+				"          Active",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> RemoveRowHash1",
+				"ObsoleteRow select(mapColumn(",
+				"          ProductKey,",
+				"          ProductNumber,",
+				"          Name,",
+				"          Color,",
+				"          StandardCost,",
+				"          ListPrice,",
+				"          StartDate,",
+				"          EndDate,",
+				"          Active",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> RemoveRowHash2",
+				"RemoveRowHash1 alterRow(insertIf(true())) ~> MarkAsInsert",
+				"LookupMaxKey sink(validateSchema: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     store: 'cache',",
+				"     format: 'inline',",
+				"     output: false,",
+				"     saveOrder: 1) ~> CacheKey",
+				"UnionAllData sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          ProductKey as integer,",
+				"          ProductAlternateKey as string,",
+				"          ProductSubcategoryKey as integer,",
+				"          WeightUnitMeasureCode as string,",
+				"          SizeUnitMeasureCode as string,",
+				"          EnglishProductName as string,",
+				"          SpanishProductName as string,",
+				"          FrenchProductName as string,",
+				"          StandardCost as decimal(19,4),",
+				"          FinishedGoodsFlag as boolean,",
+				"          Color as string,",
+				"          SafetyStockLevel as integer,",
+				"          ReorderPoint as integer,",
+				"          ListPrice as decimal(19,4),",
+				"          Size as string,",
+				"          SizeRange as string,",
+				"          Weight as double,",
+				"          DaysToManufacture as integer,",
+				"          ProductLine as string,",
+				"          DealerPrice as decimal(19,4),",
+				"          Class as string,",
+				"          Style as string,",
+				"          ModelName as string,",
+				"          LargePhoto as binary,",
+				"          EnglishDescription as string,",
+				"          FrenchDescription as string,",
+				"          ChineseDescription as string,",
+				"          ArabicDescription as string,",
+				"          HebrewDescription as string,",
+				"          ThaiDescription as string,",
+				"          GermanDescription as string,",
+				"          JapaneseDescription as string,",
+				"          TurkishDescription as string,",
+				"          StartDate as timestamp,",
+				"          EndDate as timestamp,",
+				"          Status as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['ProductKey'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> DimensionTableUpdate"
+			]
+		}
+	}
+}
