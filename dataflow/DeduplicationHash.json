@@ -1,0 +1,44 @@
+{
+	"name": "DeduplicationHash",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "adlsgen2exployeededupes",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "MakeRowHash"
+				},
+				{
+					"name": "DistinctRows"
+				}
+			],
+			"scriptLines": [
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false) ~> source1",
+				"source1 derive(rowhash = sha2(256,columns())) ~> MakeRowHash",
+				"MakeRowHash aggregate(groupBy(rowhash),",
+				"     each(match(name!='rowhash'), $$ = first($$))) ~> DistinctRows",
+				"DistinctRows sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1"
+			]
+		}
+	}
+}

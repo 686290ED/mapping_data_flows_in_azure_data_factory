@@ -1,0 +1,23 @@
+{
+	"name": "adlsgen2exployeededupes",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorageAW",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "notduplicates",
+				"fileSystem": "fuzzymatching"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}
