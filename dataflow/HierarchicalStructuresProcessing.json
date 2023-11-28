@@ -1,0 +1,111 @@
+{
+	"name": "HierarchicalStructuresProcessing",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "RestResourceWeather",
+						"type": "DatasetReference"
+					},
+					"name": "WeatherRestSource"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "FlattenPeriods"
+				},
+				{
+					"name": "ShortForecast"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "DerivedForecastArray"
+				},
+				{
+					"name": "DerivedMap"
+				},
+				{
+					"name": "ChangeMap"
+				},
+				{
+					"name": "aggregate1"
+				},
+				{
+					"name": "aggregate2"
+				},
+				{
+					"name": "aggregate3"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          body as ({@context} as string[], geometry as (coordinates as double[][][], type as string), properties as (elevation as (unitCode as string, value as double), forecastGenerator as string, generatedAt as string, periods as (detailedForecast as string, dewpoint as (unitCode as string, value as double), endTime as string, icon as string, isDaytime as boolean, name as string, number as short, probabilityOfPrecipitation as (unitCode as string, value as short), relativeHumidity as (unitCode as string, value as short), shortForecast as string, startTime as string, temperature as short, temperatureTrend as string, temperatureUnit as boolean, windDirection as string, windSpeed as string)[], units as string, updateTime as string, updated as string, validTimes as string), type as string),",
+				"          headers as [string,string]",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     httpMethod: 'GET',",
+				"     timeout: 30,",
+				"     requestInterval: 0,",
+				"     paginationRules: ['supportRFC5988' -> 'true'],",
+				"     responseFormat: ['type' -> 'json', 'documentForm' -> 'documentPerLine']) ~> WeatherRestSource",
+				"WeatherRestSource foldDown(unroll(body.properties.periods, body.properties.periods),",
+				"     mapColumn(",
+				"          {@context} = body.{@context},",
+				"          geometry = body.geometry,",
+				"          elevation = body.properties.elevation,",
+				"          forecastGenerator = body.properties.forecastGenerator,",
+				"          generatedAt = body.properties.generatedAt,",
+				"          detailedForecast = body.properties.periods.detailedForecast,",
+				"          dewpoint = body.properties.periods.dewpoint,",
+				"          endTime = body.properties.periods.endTime,",
+				"          icon = body.properties.periods.icon,",
+				"          isDaytime = body.properties.periods.isDaytime,",
+				"          name = body.properties.periods.name,",
+				"          number = body.properties.periods.number,",
+				"          probabilityOfPrecipitation = body.properties.periods.probabilityOfPrecipitation,",
+				"          relativeHumidity = body.properties.periods.relativeHumidity,",
+				"          shortForecast = body.properties.periods.shortForecast,",
+				"          startTime = body.properties.periods.startTime,",
+				"          temperature = body.properties.periods.temperature,",
+				"          temperatureTrend = body.properties.periods.temperatureTrend,",
+				"          temperatureUnit = body.properties.periods.temperatureUnit,",
+				"          windDirection = body.properties.periods.windDirection,",
+				"          windSpeed = body.properties.periods.windSpeed,",
+				"          units = body.properties.units,",
+				"          updateTime = body.properties.updateTime,",
+				"          updated = body.properties.updated,",
+				"          validTimes = body.properties.validTimes,",
+				"          type = body.type",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> FlattenPeriods",
+				"FlattenPeriods derive(forecast = @(name=name,",
+				"          shortForcast=shortForecast,",
+				"          temperature=temperature)) ~> ShortForecast",
+				"ChangeMap select(mapColumn(",
+				"          forcast = forecast",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"aggregate1 derive(forecastssort = sort(map(forecasts, lower(#item.name)), compare(#item1,  #item2)),",
+				"          forecastuppername = map(forecasts ,upper(#item.name)),",
+				"          forecastindex = mapIndex(forecasts,#index),",
+				"          forecastcombine = reduce(array(toString(forecasts.temperature)), 'All  Forecasts:', #acc + #item, #result),",
+				"          findtonight = find(forecasts,#item.name=='Tonight'),",
+				"          filtertonight = filter(forecasts,#item.name=='Tonight'),",
+				"          forecastscast = slice(forecasts,1,1)) ~> DerivedForecastArray",
+				"DerivedForecastArray derive(forecastmap = associate('When',name,'Where',generatedAt,'What',shortForecast)) ~> DerivedMap",
+				"DerivedMap derive(PenMap =  reassociate(forecastmap, iif(#key=='Where','PA',#value))) ~> ChangeMap",
+				"aggregate2 aggregate() ~> aggregate1",
+				"aggregate3 aggregate() ~> aggregate2",
+				"ShortForecast aggregate() ~> aggregate3"
+			]
+		}
+	}
+}
